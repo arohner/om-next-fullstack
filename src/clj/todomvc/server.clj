@@ -39,8 +39,8 @@
    :body    data})
 
 (defn api [req]
-  (let [data ((om/parser {:read parser/readf :mutate parser/mutatef})
-                {:conn (:datomic-connection req)} (:transit-params req))
+  (let [data (parser/parser {:conn (:datomic-connection req)} (:transit-params req))
+        _ (println "api " (:transit-params req) "=>" data)
         data' (walk/postwalk (fn [x]
                                (if (and (sequential? x) (= :result (first x)))
                                  [(first x) (dissoc (second x) :db-before :db-after :tx-data)]

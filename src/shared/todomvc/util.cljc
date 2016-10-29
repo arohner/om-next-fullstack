@@ -17,10 +17,13 @@
 #?(:cljs
    (defn transit-post [url]
      (fn [{:keys [remote]} cb]
+       (println "send:" remote)
        (.send XhrIo url
          (fn [e]
            (this-as this
-             (cb (t/read (t/reader :json) (.getResponseText this)))))
+             (let [resp (t/read (t/reader :json) (.getResponseText this))]
+               (println "send resp:" resp)
+               (cb resp))))
          "POST" (t/write (t/writer :json) remote)
          #js {"Content-Type" "application/transit+json"}))))
 

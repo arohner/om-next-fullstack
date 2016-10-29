@@ -6,7 +6,7 @@
 
 (defn render-page [{:keys [datomic-connection] :as req}]
   (let [r (td/make-reconciler datomic-connection)
-        c (om/add-root! r td/Todos nil)
+        c (om/add-root! r td/Main nil)
         html-string (dom/render-to-str c)]
     (hiccup/html5
       [:head

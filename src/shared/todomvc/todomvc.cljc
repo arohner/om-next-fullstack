@@ -12,65 +12,37 @@
 ;; -----------------------------------------------------------------------------
 ;; Components
 
-(defn main [todos {:keys [todos/list] :as props}]
-  (let [checked? (every? :todo/completed list)]
-    (dom/section #js {:id "main" :style (hidden (empty? list))}
-     (dom/input
-       #js {:id       "toggle-all"
-            :type     "checkbox"
-            :onChange (fn [_]
-                        (om/transact! todos
-                          `[(todos/toggle-all
-                              {:value ~(not checked?)})
-                            :todos/list]))
-            :checked  checked?})
-     (apply dom/ul #js {:id "todo-list"}
-       (map item/item list)))))
+#?(:cljs (enable-console-print!))
 
-(defn clear-button [todos completed]
-  (when (pos? completed)
-    (dom/button
-      #js {:id "clear-completed"
-           :onClick (fn [_] (om/transact! todos `[(todos/clear)]))}
-      (str "Clear completed (" completed ")"))))
-
-(defn footer [todos props active completed]
-  (dom/footer #js {:id "footer" :style (hidden (empty? (:todos/list props)))}
-    (dom/span #js {:id "todo-count"}
-      (dom/strong nil active)
-      (str " " (pluralize active "item") " left"))
-    (apply dom/ul #js {:id "filters" :className (name (:todos/showing props))}
-      (map (fn [[x y]] (dom/li nil (dom/a #js {:href (str "#/" x)} y)))
-        [["" "All"] ["active" "Active"] ["completed" "Completed"]]))
-    (clear-button todos completed)))
-
-(defui Todos
-  static om/IQueryParams
-  (params [this]
-    {:todo-item (om/get-query item/TodoItem)})
-
+(defui Header
+  static om/Ident
+  (ident [this {:keys [app/user] :as props}]
+      (println "header ident:" props)
+      [:app/user user])
   static om/IQuery
   (query [this]
-    '[{:todos/list ?todo-item}])
-
+      ['[:app/user _]])
   Object
   (render [this]
-    (let [props (merge (om/props this) {:todos/showing :all})
-          {:keys [todos/list]} props
-          active (count (remove :todo/completed list))
-          completed (- (count list) active)]
-      (dom/div nil
-        (dom/header #js {:id "header"}
-          (dom/h1 nil "todos")
-          (dom/input
-            #js {:ref "newField"
-                 :id "new-todo"
-                 :placeholder "What needs to be done?"
-                 :onKeyDown #(do %)})
-          (main this props)
-          (footer this props active completed))))))
+      (println "header render" (om/props this))
+      (let [props (om/props this)]
+        (dom/div nil
+                 (str "current-user:" (:app/user props))))))
 
-(def todos (om/factory Todos))
+(def header (om/factory Header))
+
+(defui Main
+  static om/IQuery
+  (query [this]
+      `[:app/headline :app/user {:header/data ~(om/get-query Header)}])
+  Object
+  (render [this]
+      (println "main render" (om/props this))
+      (let [{:keys [app/headline]} (om/props this)]
+
+        (dom/div nil
+                 (str "Hello, " headline)
+                 (header (:header (om/props this)))))))
 
 #?(:clj
    (defn make-reconciler [conn]
@@ -85,7 +57,7 @@
      (om/reconciler
        {:state     (atom {})
         :normalize true
-        :parser    (om/parser {:read p/read :mutate p/mutate})
+        :parser    p/parser
         :send      (util/transit-post "/api")})))
 
-#?(:cljs (om/add-root! reconciler Todos (gdom/getElement "todoapp")))
+#?(:cljs (om/add-root! reconciler Main (gdom/getElement "todoapp")))

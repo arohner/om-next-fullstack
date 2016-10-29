@@ -6,6 +6,9 @@
 ;; Reads
 
 (defmulti read om/dispatch)
+(defmulti mutate om/dispatch)
+
+(def parser (om/parser {:read read :mutate mutate}))
 
 (defmethod read :default
   [{:keys [state]} k _]
@@ -30,10 +33,24 @@
       {:value (get-todos st)}
       {:remote true})))
 
+(defn recursive-read [{:keys [target query] :as env} key params]
+  (println "recursive-read:" key query target)
+  (let [ret (parser env query target)]
+    (println "recursive-read" key "=>" ret)
+    (when-not (empty? ret)
+      (println "recursive-read " key " ast" (om/query->ast ret))
+      {target (om/query->ast ret)})))
+
+(defmethod read :header/data [{:keys [query state ast target] :as env} k params]
+  (let [st @state]
+    {:remote true}
+    ))
+
+(defmethod read :app/user [_ _ _]
+  {:remote true})
+
 ;; =============================================================================
 ;; Mutations
-
-(defmulti mutate om/dispatch)
 
 (defmethod mutate :default
   [_ _ _] {:remote true})

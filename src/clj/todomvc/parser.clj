@@ -1,11 +1,15 @@
 (ns todomvc.parser
   (:refer-clojure :exclude [read])
-  (:require [datomic.api :as d]))
+  (:require [datomic.api :as d]
+            [om.next :as om]))
 
 ;; =============================================================================
 ;; Reads
 
 (defmulti readf (fn [env k params] k))
+(defmulti mutatef (fn [env k params] k))
+
+(def parser (om/parser {:read readf :mutate mutatef}))
 
 (defmethod readf :default
   [_ k _]
@@ -36,10 +40,23 @@
   [{:keys [conn query]} _ params]
   {:value (todos (d/db conn) query params)})
 
+(defmethod readf :app/headline
+  [_ _ _]
+  {:value "World"})
+
+(defmethod readf :app/user
+  [_ _ _]
+  {:value "arohner"})
+
+(defmethod readf :header/data
+  [{:keys [query target] :as env} key params]
+  {:post [(do (println "readf header/data:" query "=>" %) true)]}
+  ;; {:remote true}
+  {:value (parser env query target)}
+  )
+
 ;; =============================================================================
 ;; Mutations
-
-(defmulti mutatef (fn [env k params] k))
 
 (defmethod mutatef :default
   [_ k _]
